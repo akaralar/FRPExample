@@ -1,0 +1,25 @@
+//
+//  FRPExample-Prefix.pch
+//  FRPExample
+//
+//  Created by Ahmet Karalar on 29/12/14.
+//  Copyright (c) 2014 Ahmet Karalar. All rights reserved.
+//
+
+#ifndef FRPExample_FRPExample_Prefix_pch
+#define FRPExample_FRPExample_Prefix_pch
+
+// Pods
+#import <ReactiveCocoa/ReactiveCocoa.h>
+#import <500px-iOS-api/PXAPI.h>
+#import <libextobjc/EXTScope.h>
+
+// App Delegate
+#import "AppDelegate.h"
+#define APPDELEGATE ((AppDelegate *)[[UIApplication sharedApplication] delegate])
+
+
+// Include any system framework and library headers here that should be included in all compilation units.
+// You will also need to set the Prefix Header build setting of one or more of your targets to reference this file.
+
+#endif
