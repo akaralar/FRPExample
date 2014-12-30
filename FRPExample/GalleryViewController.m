@@ -7,11 +7,12 @@
 //
 
 #import "Cell.h"
+#import "FullSizePhotoViewController.h"
 #import "GalleryFlowLayout.h"
 #import "GalleryViewController.h"
 #import "PhotoImporter.h"
 
-@interface GalleryViewController ()
+@interface GalleryViewController () <FullSizePhotoViewControllerDelegate>
 
 @property (nonatomic) NSArray *photosArray;
 
@@ -81,6 +82,26 @@ static NSString *CellIdentifier = @"Cell";
     [cell setPhotoModel:self.photosArray[indexPath.item]];
 
     return cell;
+}
+
+- (void)      collectionView:(UICollectionView *)collectionView
+    didSelectItemAtIndexPath:(NSIndexPath *)indexPath
+{
+    FullSizePhotoViewController *controller =
+        [[FullSizePhotoViewController alloc] initWithPhotoModels:self.photosArray
+                                               currentPhotoIndex:indexPath.item];
+
+    controller.delegate = self;
+    [self.navigationController pushViewController:controller animated:YES];
+}
+
+#pragma mark - FullSizePhotoViewControllerDelegate
+
+- (void)userDidScroll:(FullSizePhotoViewController *)viewController toPhotoAtIndex:(NSInteger)index
+{
+    [self.collectionView scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:index inSection:0]
+                                atScrollPosition:UICollectionViewScrollPositionCenteredVertically
+                                        animated:NO];
 }
 
 @end
