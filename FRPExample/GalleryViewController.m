@@ -11,10 +11,13 @@
 #import "GalleryFlowLayout.h"
 #import "GalleryViewController.h"
 #import "PhotoImporter.h"
+#import "RACDelegateProxy.h"
 
-@interface GalleryViewController () <FullSizePhotoViewControllerDelegate>
+@interface GalleryViewController ()
 
 @property (nonatomic) NSArray *photosArray;
+
+@property (nonatomic) id collectionViewDelegate;
 
 @end
 
@@ -52,18 +55,66 @@ static NSString *CellIdentifier = @"Cell";
         [self.collectionView reloadData];
     }];
 
+    RACDelegateProxy *viewControllerDelegate =
+        [[RACDelegateProxy alloc] initWithProtocol:@protocol(FullSizePhotoViewControllerDelegate)];
+    [[viewControllerDelegate rac_signalForSelector:@selector(userDidScroll:toPhotoAtIndex:)
+                                      fromProtocol:@protocol(FullSizePhotoViewControllerDelegate)]
+     subscribeNext:^(RACTuple *tuple) {
+        @strongify(self);
+        [self.collectionView
+         scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:[tuple.second integerValue]
+                                                     inSection:0]
+                atScrollPosition:UICollectionViewScrollPositionCenteredVertically
+                        animated:NO];
+    }];
+
+    self.collectionViewDelegate =
+        [[RACDelegateProxy alloc] initWithProtocol:@protocol(UICollectionViewDelegate)];
+
+    [[self.collectionViewDelegate
+      rac_signalForSelector:@selector(collectionView:didSelectItemAtIndexPath:)]
+     subscribeNext:^(RACTuple *arguments) {
+        @strongify(self);
+
+        NSIndexPath *indexPath = arguments.second;
+        FullSizePhotoViewController *controller =
+            [[FullSizePhotoViewController alloc] initWithPhotoModels:self.photosArray
+                                                   currentPhotoIndex:indexPath.item];
+        controller.delegate = (id<FullSizePhotoViewControllerDelegate>)viewControllerDelegate;
+        [self.navigationController pushViewController:controller animated:YES];
+    }];
+
+    // long way to do things
+//    RACSignal *photoSignal = [PhotoImporter importPhotos];
+//    RACSignal *photosLoaded = [photoSignal catch:^RACSignal *(NSError *error) {
+//        NSLog(@"Couldn't fetch photos from 500px: %@", error);
+//        return [RACSignal empty];
+//    }];
+//
+//    RAC(self, photosArray) = photosLoaded;
+//    [photosLoaded subscribeCompleted:^{
+//        @strongify(self);
+//        [self.collectionView reloadData];
+//    }];
+
+    // shorthand for above commented code
+    RAC(self, photosArray) = [[[[PhotoImporter importPhotos] doCompleted:^{
+        @strongify(self);
+        [self.collectionView reloadData];
+    }] logError] catchTo:[RACSignal empty]];
+
     // load data
-    [self loadPopularPhotos];
+//    [self loadPopularPhotos];
 }
 
-- (void)loadPopularPhotos
-{
-    [[PhotoImporter importPhotos] subscribeNext:^(id x) {
-        self.photosArray = x;
-    } error:^(NSError *error) {
-        NSLog(@"Couldn't fetch photos from 500px: %@", error);
-    }];
-}
+//- (void)loadPopularPhotos
+//{
+//    [[PhotoImporter importPhotos] subscribeNext:^(id x) {
+//        self.photosArray = x;
+//    } error:^(NSError *error) {
+//        NSLog(@"Couldn't fetch photos from 500px: %@", error);
+//    }];
+//}
 
 #pragma mark - Collection View
 
@@ -82,26 +133,6 @@ static NSString *CellIdentifier = @"Cell";
     [cell setPhotoModel:self.photosArray[indexPath.item]];
 
     return cell;
-}
-
-- (void)      collectionView:(UICollectionView *)collectionView
-    didSelectItemAtIndexPath:(NSIndexPath *)indexPath
-{
-    FullSizePhotoViewController *controller =
-        [[FullSizePhotoViewController alloc] initWithPhotoModels:self.photosArray
-                                               currentPhotoIndex:indexPath.item];
-
-    controller.delegate = self;
-    [self.navigationController pushViewController:controller animated:YES];
-}
-
-#pragma mark - FullSizePhotoViewControllerDelegate
-
-- (void)userDidScroll:(FullSizePhotoViewController *)viewController toPhotoAtIndex:(NSInteger)index
-{
-    [self.collectionView scrollToItemAtIndexPath:[NSIndexPath indexPathForItem:index inSection:0]
-                                atScrollPosition:UICollectionViewScrollPositionCenteredVertically
-                                        animated:NO];
 }
 
 @end

@@ -12,6 +12,6 @@
 
 @interface Cell : UICollectionViewCell
 
-- (void)setPhotoModel:(PhotoModel *)model;
+@property (nonatomic) PhotoModel *photoModel;
 
 @end
